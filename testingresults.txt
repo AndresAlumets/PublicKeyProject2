@@ -1,0 +1,15 @@
+Running tests for affine
+Operations done in doubling: 550906 for 50000 doublings with point type affine
+Time taken for 50000 doublings with point type affine : 1.3995966911315918 seconds
+Operations done in adding: 450000 for 50000 additions with point type affine
+Time taken for 50000 additions with point type affine : 1.2370736598968506 seconds
+Running tests for projective
+Operations done in doubling: 1152303 for 50000 doublings with point type projective
+Time taken for 50000 doublings with point type projective : 0.5847575664520264 seconds
+Operations done in adding: 1600000 for 50000 additions with point type projective
+Time taken for 50000 additions with point type projective : 1.0384373664855957 seconds
+Running tests for jacobian
+Operations done in doubling: 1152024 for 50000 doublings with point type jacobian
+Time taken for 50000 doublings with point type jacobian : 0.5995559692382812 seconds
+Operations done in adding: 1150000 for 50000 additions with point type jacobian
+Time taken for 50000 additions with point type jacobian : 0.8643438816070557 seconds
