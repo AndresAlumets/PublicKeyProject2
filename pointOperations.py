@@ -220,37 +220,68 @@ def add_jacobian_points(P, Q, p):
     if (P.X * Q.Z ** 2) % p == (Q.X * P.Z ** 2) % p and (P.Y * Q.Z ** 3) % p != (Q.Y * P.Z ** 3) % p:
         return JacobianPoint(1, 1, 0, P.curve)  # Point at infinity
     # Point addition in Jacobian coordinates
-    L = (P.Y - Q.Y) % p
-    Z_r = ((P.X - Q.X) * P.Z) % p
-    X_r = (L ** 2 -  (P.X + Q.X) * (P.X - Q.X) ** 2 ) % p
-    Y_r = (L* (P.X * (P.X - Q.X) ** 2 - X_r) - P.Y * (P.X - Q.X) ** 3) % p
+    Z1Z1 = (P.Z ** 2) % p
+    Z2Z2 = (Q.Z ** 2) % p
+    U1 = (P.X * Z2Z2) % p
+    U2 = (Q.X * Z1Z1) % p
+    Z1Z1Z1 = (P.Z * Z1Z1) % p
+    Z2Z2Z2 = (Q.Z * Z2Z2) % p
+    S1 = (P.Y * Z2Z2Z2) % p
+    S2 = (Q.Y * Z1Z1Z1) % p
+    H = (U2 - U1) % p
+    r = (S2 - S1) % p
+    H2 = (H ** 2) % p
+    H3 = (H * H2) % p
+    U1H2 = (U1 * H2) % p
+    X_r = (r ** 2 - H3 - 2 * U1H2) % p
+    Y_r = (r * (U1H2 - X_r) - S1 * H3) % p
+    Z_r = (H * P.Z * Q.Z) % p
     return JacobianPoint(X_r, Y_r, Z_r, P.curve)
 
 def add_points(P, Q, type, p):
     if type == "affine":
         return add_affine_points(P, Q, p)
     elif type == "projective":
-        P_proj = to_projective(P)
-        Q_proj = to_projective(Q)
-        R_proj = add_projective_points(P_proj, Q_proj, p)
-        return to_affine(R_proj, type)
+        return add_projective_points(P, Q, p)
     elif type == "jacobian":
-        P_jac = to_jacobian(P)
-        Q_jac = to_jacobian(Q)
-        R_jac = add_jacobian_points(P_jac, Q_jac, p)
-        return to_affine(R_jac, type)
+        return add_jacobian_points(P, Q, p)
     
+ #Double point function
+ # Input type of P can be multiple types
+ # Returns point in same system as input   
 def double_point(P, type, p):
     if type == "affine":
         return double_affine_point(P, p)
     elif type == "projective":
-        P_proj = to_projective(P)
-        R_proj = double_projective_point(P_proj, p)
-        return to_affine(R_proj, type)
+        return double_projective_point(P, p)
     elif type == "jacobian":
-        P_jac = to_jacobian(P)
-        R_jac = double_jacobian_point(P_jac, p)
-        return to_affine(R_jac, type)
+        return double_jacobian_point(P, p)
+    
+def scalar_multiply(P, k, type, p):
+    R = infinity(type, P.curve)
+    Q = P
+    while k > 0:
+        if k % 2 == 1:
+            R = add_points(R, Q, type, p)
+        Q = double_point(Q, type, p)
+        k = k // 2
+    return R
+
+def infinity(type, curve):
+    if type == "affine":
+        return None
+    elif type == "projective":
+        return ProjectivePoint(0, 1, 0, curve)
+    elif type == "jacobian":
+        return JacobianPoint(1, 1, 0, curve)
+    
+def isInfinity(P, type):
+    if type == "affine":
+        return P == None
+    elif type == "projective":
+        return P.Z == 0
+    elif type == "jacobian":
+        return P.Z == 0
     
 def equals(P, Q, type):
     if type == "affine":
@@ -272,92 +303,127 @@ def equals(P, Q, type):
             return False
         return (P.X * Q.Z ** 2) % P.curve.p == (Q.X * P.Z ** 2) % P.curve.p and (P.Y * Q.Z ** 3) % P.curve.p == (Q.Y * P.Z ** 3) % P.curve.p
     
-def test1(Gx, Gy, curve, p, point_type):
+def test1(fixedPoint, p, point_type):
     #Simple addition test
-    P = AffinePoint(Gx, Gy, curve)
-    Q = AffinePoint(Gx, Gy, curve)
+    P = fixedPoint
+    Q = fixedPoint
     R = add_points(P, Q, point_type, p)
     expected_R = double_point(P, point_type, p)
-    if equals(R, expected_R, "affine"):
+    if equals(R, expected_R, point_type):
         print("Test1 Doubling : passes")
     else:
         print("Test1 Doubling : fails")
 
-def test2(Gx, Gy, curve, p, point_type):
-    P = AffinePoint(Gx, Gy, curve)
-    Q = None
+def test2(fixedPoint, p, point_type):
+    P = fixedPoint
+    Q = infinity(point_type, fixedPoint.curve)
     R = add_points(P, Q, point_type, p)
-    if equals(R, P, "affine"):
+    if equals(R, P, point_type):
         print("Test2 Addition with infinity : passes")
     else:
         print("Test2 Addition with infinity : fails")
 
-def test3(Gx, Gy, curve, p, point_type):
-    P = None
-    Q = AffinePoint(Gx, Gy, curve)
+def test3(fixedPoint, p, point_type):
+    P = infinity(point_type, fixedPoint.curve)
+    Q = fixedPoint
     R = add_points(P, Q, point_type, p)
-    if equals(R, Q, "affine"):
+    if equals(R, Q, point_type):
         print("Test3 Addition with infinity : passes")
     else:
         print("Test3 Addition with infinity : fails")
 
-def test4(Gx, Gy, curve, p, point_type):
-    P = AffinePoint(Gx, Gy, curve)
-    Q = AffinePoint(Gx, (-Gy) % p, curve)
+def test4(fixedPoint, p, point_type):
+    P = fixedPoint
+    if point_type == "affine":
+        Q = AffinePoint(P.x, (-P.y) % p, P.curve)
+    elif point_type == "projective":
+        Q = ProjectivePoint(P.X, (-P.Y) % p, P.Z, P.curve)
+    elif point_type == "jacobian":
+        Q = JacobianPoint(P.X, (-P.Y) % p, P.Z, P.curve)
     R = add_points(P, Q, point_type, p)
-    if R == None:
+    if isInfinity(R, point_type):
         print("Test4 Addition with negative point : passes")
     else:
         print("Test4 Addition with negative point : fails")
 
-def test5(Gx, Gy, curve, p, point_type):
+def test5(fixedPoint, p, point_type):
     k1 = 4
     k2 = 5
     k_total = 10
-    P = AffinePoint(Gx, Gy, curve)
-    R1 = P
-    for _ in range(k1 - 1): #Would be faster to do double and add but this is just for testing
-        R1 = add_points(R1, P, point_type, p)
-    R2 = P
-    for _ in range(k_total - k1 -1):
-        R2 = add_points(R2, P, point_type, p)
+    P = fixedPoint
+    R1 = scalar_multiply(P, k1, point_type, p)
+    R2 = scalar_multiply(P, k_total - k1, point_type, p)
     R_res1 = add_points(R1, R2, point_type, p)
-    R3 = P
-    for _ in range(k2 - 1):
-        R3 = add_points(R3, P, point_type, p)
-    R4 = P
-    for _ in range(k_total - k2 -1):
-        R4 = add_points(R4, P, point_type, p)
+    R3 = scalar_multiply(P, k2, point_type, p)
+    R4 = scalar_multiply(P, k_total - k2, point_type, p)
     R_res2 = add_points(R3, R4, point_type, p)
-    if equals(R_res1, R_res2, "affine"):
+    if equals(R_res1, R_res2, point_type):
         print("Test5 Distributivity : passes")
     else:
         print("Test5 Distributivity : fails")
 
-def test6(Gx, Gy, curve, p, point_type):
+def test6(fixedPoint, p, point_type):
     k1 = 4
     k2 = 5
-    P = AffinePoint(Gx, Gy, curve)
-    R1 = P
-    for _ in range(k1 - 1):
-        R1 = add_points(R1, P, point_type, p)
-    R2 = P
-    for _ in range(k2 -1):
-        R2 = add_points(R2, P, point_type, p)
+    P = fixedPoint
+    R1 = scalar_multiply(P, k1, point_type, p)
+    R2 = scalar_multiply(P, k2, point_type, p)
     R_res1 = add_points(R1, R2, point_type, p)
     R_res2 = add_points(R2, R1, point_type, p)
-    if equals(R_res1, R_res2, "affine"):
+    if equals(R_res1, R_res2, point_type):
         print("Test6 Commutativity : passes")
     else:
         print("Test6 Commutativity : fails")
 
+def test7(fixedPoint, p, point_type):
+    k1 = 4
+    k2 = 5
+    P = fixedPoint
+    R1 = scalar_multiply(P, k1, point_type, p)
+    R2 = scalar_multiply(P, k2, point_type, p)
+    R3 = scalar_multiply(P, k1 + k2, point_type, p)
+    R_res = add_points(R1, R2, point_type, p)
+    if equals(R_res, R3, point_type):
+        print("Test7 Addition of Scalars : passes")
+    else:
+        print("Test7 Addition of Scalars : fails")
+
+def test8(fixedPoint, p, point_type):
+    k1 = random.randint(1, p-1)
+    k2 = random.randint(1, p-1)
+    k3 = random.randint(1, p-1)
+    R1 = scalar_multiply(fixedPoint, k1, point_type, p)
+    R2 = scalar_multiply(R1, k2, point_type, p)
+    R3 = scalar_multiply(fixedPoint, k3, point_type, p)
+    R_res1 = add_points(R1, add_points(R2, R3, point_type, p), point_type, p)
+    R_res2 = add_points(add_points(R1, R2, point_type, p), R3, point_type, p)
+    if equals(R_res1, R_res2, point_type):
+        print("Test8 Associativity : passes")
+    else:
+        print("Test8 Associativity : fails")
+
+
 def run_tests(Gx, Gy, curve, p, point_type):
-    test1(Gx, Gy, curve, p, point_type)
-    test2(Gx, Gy, curve, p, point_type)
-    test3(Gx, Gy, curve, p, point_type)
-    test4(Gx, Gy, curve, p, point_type)
-    test5(Gx, Gy, curve, p, point_type)
-    test6(Gx, Gy, curve, p, point_type)
+    fixedPoint = AffinePoint(Gx, Gy, curve)
+    if point_type == "affine":
+        print("Running tests for Affine Points")
+    elif point_type == "projective":
+        print("Running tests for Projective Points")
+        fixedPoint = to_projective(fixedPoint)
+    elif point_type == "jacobian":
+        print("Running tests for Jacobian Points")
+        fixedPoint = to_jacobian(fixedPoint)
+    test1(fixedPoint, p, point_type)
+    test2(fixedPoint, p, point_type)
+    test3(fixedPoint, p, point_type)
+    test4(fixedPoint, p, point_type)
+    test5(fixedPoint, p, point_type)
+    test6(fixedPoint, p, point_type)
+    test7(fixedPoint, p, point_type)
+    test8(fixedPoint, p, point_type)
+
+def init_curve(p):
+    return WeierstrassCurve(p-3, 18958286285566608000408668544493926415504680968679321075787234672564, p=p)
 
 point_type = sys.argv[1]
 p = int(sys.argv[2])
@@ -366,17 +432,9 @@ p = int(sys.argv[2])
 #Because those are not given as arguments
 # So it is all tuned for a specific curve
 
-a= p-3
-b= 18958286285566608000408668544493926415504680968679321075787234672564
-while (4 * a**3 + 27 * b**2) % p == 0:
-    b+=1
-
-curve = WeierstrassCurve(a, b, p=p)
+curve = init_curve(p)
 print(curve.writeOut())
 Gx = 19277929113566293071110308034699488026831934219452440156649784352033
 Gy = 19926808758034470970197974370888749184205991990603949537637343198772
-left = (Gy ** 2) % p
-right = (Gx ** 3 + a * Gx + b) % p
-
 
 run_tests(Gx, Gy, curve, p, point_type)
