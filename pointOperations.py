@@ -362,6 +362,14 @@ def test5(fixedPoint, p, point_type):
     else:
         print("Test5 Distributivity : fails")
 
+    R1_affine = to_affine(R1, point_type)
+    R2_affine = to_affine(R2, point_type)
+    R_res1_affine = to_affine(R_res1, point_type)
+    if equals(R_res1_affine, to_affine(R_res1, point_type), "affine"):
+        print("Test5 Distributivity (affine check) : passes")
+    else:
+        print("Test5 Distributivity (affine check) : fails")
+
 def test6(fixedPoint, p, point_type):
     k1 = 4
     k2 = 5
@@ -370,10 +378,17 @@ def test6(fixedPoint, p, point_type):
     R2 = scalar_multiply(P, k2, point_type, p)
     R_res1 = add_points(R1, R2, point_type, p)
     R_res2 = add_points(R2, R1, point_type, p)
+    R1_affine = to_affine(R1, point_type)
+    R2_affine = to_affine(R2, point_type)
+    R_res1_affine = to_affine(R_res1, point_type)
     if equals(R_res1, R_res2, point_type):
         print("Test6 Commutativity : passes")
     else:
         print("Test6 Commutativity : fails")
+    if equals(R_res1_affine, to_affine(R_res1, point_type), "affine"):
+        print("Test6 Commutativity (affine check) : passes")
+    else:   
+        print("Test6 Commutativity (affine check) : fails")
 
 def test7(fixedPoint, p, point_type):
     k1 = 4
@@ -387,6 +402,14 @@ def test7(fixedPoint, p, point_type):
         print("Test7 Addition of Scalars : passes")
     else:
         print("Test7 Addition of Scalars : fails")
+
+    R1_affine = to_affine(R1, point_type)
+    R2_affine = to_affine(R2, point_type)
+    R_res_affine = to_affine(R_res, point_type)
+    if equals(R_res_affine, add_points(R1_affine, R2_affine, "affine", p), "affine"):
+        print("Test7 Addition of Scalars (affine check) : passes")
+    else:
+        print("Test7 Addition of Scalars (affine check) : fails")
 
 def test8(fixedPoint, p, point_type):
     k1 = random.randint(1, p-1)
@@ -402,6 +425,14 @@ def test8(fixedPoint, p, point_type):
     else:
         print("Test8 Associativity : fails")
 
+    R1_affine = to_affine(R1, point_type)
+    R2_affine = to_affine(R2, point_type)
+    R3_affine = to_affine(R3, point_type)
+    R_res1_affine = to_affine(R_res1, point_type)
+    if equals(R_res1_affine, add_points(R1_affine, add_points(R2_affine, R3_affine, "affine", p), "affine", p), "affine"):
+        print("Test8 Associativity (affine check) : passes")
+    else:
+        print("Test8 Associativity (affine check) : fails")
 
 def run_tests(Gx, Gy, curve, p, point_type):
     fixedPoint = AffinePoint(Gx, Gy, curve)
